@@ -12,31 +12,27 @@
             --heading-color: #FFFFFF;
         }
         html, body {
-            height: 100%;
             margin: 0;
-            overflow: hidden;
+            overflow-x: hidden;
         }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Roboto Mono', monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
         }
         canvas {
             position: fixed;
             top: 0;
             left: 0;
             z-index: -1;
-            width: 100%;
-            height: 100%;
         }
         .content-wrapper {
             position: relative;
             z-index: 1;
             padding: 2rem;
+            max-width: 900px;
+            margin: 4rem auto;
+            text-align: center;
         }
         h1 {
             font-size: clamp(2.5rem, 5vw, 4.5rem);
@@ -63,6 +59,42 @@
             background-color: var(--particle-color);
             color: var(--bg-color);
         }
+
+        /* Project List */
+        .project-list {
+            text-align: left;
+            max-width: 700px;
+            margin: 2rem auto 0;
+        }
+        .project-item {
+            margin-bottom: 2rem;
+            border-left: 3px solid var(--particle-color);
+            transition: background-color 0.3s;
+            padding: 1rem 1.5rem;
+        }
+        .project-item:hover {
+            background-color: rgba(77, 157, 224, 0.1);
+        }
+        .project-item:last-child {
+            margin-bottom: 0;
+        }
+        .project-item h3 {
+            margin: 0 0 0.5rem 0;
+        }
+        .project-item h3 a {
+            color: var(--heading-color);
+            text-decoration: none;
+            font-size: 1.5rem;
+        }
+        .project-item h3 a:hover {
+            text-decoration: underline;
+        }
+        .project-item p {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-color);
+            max-width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -77,6 +109,29 @@
             <a href="https://github.com/janscheres" target="_blank">GitHub</a>
             <a href="clusdur/">ClusDur</a>
         </div>
+        
+        <div id="projects">
+            <h2 style="font-size: 2rem; color: var(--heading-color); margin-top: 4rem; margin-bottom: 2rem;">Projects</h2>
+            <div class="project-list">
+                <div class="project-item">
+                    <h3><a href="https://github.com/janscheres/sde_playground" target="_blank">Stochastic Differential Equations Playground</a></h3>
+                    <p>An interactive notebook to explore the reversal of Stochastic Differential Equations using a trained neural network, visualizing data diffusion and reconstruction.</p>
+                </div>
+                <div class="project-item">
+                    <h3><a href="https://github.com/janscheres/nn" target="_blank">Neural Network from Scratch (Go)</a></h3>
+                    <p>A neural network library built from scratch in Go. Implements a variety of layer types, activation functions, and optimizers using only the Gonum library for matrix operations.</p>
+                </div>
+                <div class="project-item">
+                    <h3><a href="https://github.com/Minetest-j45/dothole" target="_blank">DotHole DNS Server</a></h3>
+                    <p>A DNS over TLS recursive name server inspired by Pi-hole, with caching, blocklists, and prometheus metrics.</p>
+                </div>
+                <div class="project-item">
+                    <h3><a href="https://github.com/janscheres/bridges" target="_blank">DataBridges: Unconventional Data Flow</a></h3>
+                    <p>A visualization tool that traces a string through unconventional storage locations on a laptop, like GPU memory and network buffers. Winner of the 'Spirit of the Durhack Dino' award at Durhack 2025.</p>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -158,11 +213,20 @@
             }
             requestAnimationFrame(animate);
         }
-
-        window.addEventListener('resize', init);
-        window.addEventListener('mousemove', (event) => { mouse.x = event.x; mouse.y = event.y; });
-        window.addEventListener('mouseout', () => { mouse.x = null; mouse.y = null; });
         
+        window.addEventListener('resize', init);
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = event.clientX;
+            mouse.y = event.clientY;
+        });
+        
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+        
+        // Initial setup
         init();
         animate();
     </script>
