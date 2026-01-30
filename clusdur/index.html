@@ -100,6 +100,14 @@
             padding: 0;
             background-color: transparent;
         }
+        .post-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5rem auto;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
         blockquote {
             border-left: 4px solid var(--accent-color);
             padding-left: 1rem;
@@ -184,6 +192,7 @@ cd $HPL_BUILD_DIR</code></pre>
                 
                 <h3>Building the Dependencies (Open MPI & OpenBLAS)</h3>
                 <p>HPL has a few key dependencies: an MPI implementation and a BLAS (Basic Linear Algebra Subprograms) library. We'll compile both Open MPI and OpenBLAS from source inside our build directory.</p>
+                <img src="hpl_deps.png" alt="HPL Dependencies Diagram" style="width:100%; max-width:600px; display:block; margin: 0 auto; padding: 20px 0;">
                 <p>Let's start with Open MPI. We'll download the source, create a separate build directory (a good practice to keep the source tree clean), and configure it.</p>
                 <pre><code># Download and extract Open MPI
 wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.gz
