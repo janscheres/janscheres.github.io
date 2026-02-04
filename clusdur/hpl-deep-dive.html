@@ -171,10 +171,14 @@
                 <nav class="toc">
                     <h2>Contents</h2>
                     <ul>
+                        <li><a href="#what-is-hpl">What is HPL?</a></li>
                         <li><a href="#part-1">Part 1: Compiling HPL from Source</a></li>
                         <li><a href="#part-2">Part 2: A Little Library Mischief with LD_PRELOAD</a></li>
                     </ul>
                 </nav>
+
+                <h2 id="what-is-hpl">What is HPL?</h2>
+                <p>HPL, or High-Performance Linpack, is a benchmark designed to measure a system's floating-point computing power. It does this by solving a dense system of linear algebra equations. Its results are what determine the rankings in the <a href="https://www.top500.org/">TOP500 list</a>, which catalogues the most powerful non-distributed computer systems in the world.</p>
 
                 <h2 id="part-1">Part 1: Compiling HPL from Source</h2>
                 <p>When you need a piece of software, you have two main options: use a pre-built binary or compile it from source. While pre-built is easier, compiling from source is usually better in HPC because the compiler can make machine-specific optimisations for the exact hardware you're running on. For HPL, this is key to squeezing out every last drop of performance.</p>
