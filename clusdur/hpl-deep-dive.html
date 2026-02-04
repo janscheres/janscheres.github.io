@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClusDur Hub | A Deep Dive into Libraries</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --line-color: #cccccc;
+            --text-color: #EAEAEA;
+            --heading-color: #FFFFFF;
+            --code-bg: #1a1a1a;
+            --accent-color: #4D9DE0;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Roboto Mono', monospace;
+            margin: 0;
+            line-height: 1.7;
+        }
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100%;
+            height: 100%;
+        }
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        .post-container {
+            max-width: 800px;
+            width: 100%;
+        }
+        .post-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 2rem;
+        }
+        .post-header h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            color: var(--heading-color);
+            margin: 0 0 0.5rem 0;
+        }
+        .post-header p {
+            font-size: 1rem;
+            color: #aaa;
+        }
+        .post-content h2 {
+            font-size: 2rem;
+            color: var(--accent-color);
+            margin-top: 3rem;
+            border-bottom: 1px solid #444;
+            padding-bottom: 0.5rem;
+        }
+        .post-content h3 {
+            font-size: 1.5rem;
+            color: var(--heading-color);
+            margin-top: 2rem;
+        }
+        .post-content p, .post-content ul, .post-content li {
+            font-size: 1.1rem;
+        }
+        .post-content ul {
+            padding-left: 1.5rem;
+        }
+        .post-content a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        .post-content a:hover {
+            text-decoration: underline;
+        }
+        pre {
+            background-color: var(--code-bg);
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 1rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 1rem;
+            color: #f0f0f0;
+        }
+        code {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Roboto Mono', monospace;
+            background-color: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+        }
+        pre code {
+            padding: 0;
+            background-color: transparent;
+        }
+        .post-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5rem auto;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        blockquote {
+            border-left: 4px solid var(--accent-color);
+            padding-left: 1rem;
+            margin-left: 0;
+            font-style: italic;
+            color: #ccc;
+        }
+        .toc {
+            background-color: #111;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .toc h2 {
+            margin-top: 0;
+            border-bottom: none;
+            font-size: 1.5rem;
+        }
+        .toc ul {
+            list-style: none;
+            padding: 0;
+        }
+        .toc li {
+            margin-bottom: 0.5rem;
+        }
+        .post-footer {
+            margin-top: 4rem;
+            text-align: center;
+            border-top: 1px solid #333;
+            padding-top: 2rem;
+        }
+        .post-footer a {
+            color: var(--line-color);
+            text-decoration: none;
+            border: 1px solid var(--line-color);
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .post-footer a:hover {
+            background-color: var(--line-color);
+            color: var(--bg-color);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="topo-canvas"></canvas>
+
+    <div class="content-wrapper">
+        <div class="post-container">
+            <header class="post-header">
+                <h1>A Deep Dive into Libraries: HPL, ldd, and LD_PRELOAD</h1>
+                <p>Posted on January 29, 2026</p>
+            </header>
+
+            <main class="post-content">
+                <p>Compiling high-performance software from source is a foundational skill in HPC. It allows for machine-specific optimisations that can't be achieved with pre-built binaries. This post uses the High-Performance Linpack (HPL) benchmark as a practical example to explore the compilation process, and then dives into some interesting concepts like <code>ldd</code> and <code>LD_PRELOAD</code>.</p>
+                
+                <nav class="toc">
+                    <h2>Contents</h2>
+                    <ul>
+                        <li><a href="#part-1">Part 1: Compiling HPL from Source</a></li>
+                        <li><a href="#part-2">Part 2: A Little Library Mischief with LD_PRELOAD</a></li>
+                    </ul>
+                </nav>
+
+                <h2 id="part-1">Part 1: Compiling HPL from Source</h2>
+                <p>When you need a piece of software, you have two main options: use a pre-built binary or compile it from source. While pre-built is easier, compiling from source is usually better in HPC because the compiler can make machine-specific optimisations for the exact hardware you're running on. For HPL, this is key to squeezing out every last drop of performance.</p>
+
+                <h3>Setting up the Environment</h3>
+                <p>First, after logging into the cluster, it's good practice to start with a clean slate by purging any loaded modules, and then loading the specific compiler we need. In this case, a modern GCC.</p>
+                <pre><code>module purge
+module avail gcc
+module load gcc/15.2
+
+# Set up a build directory
+export HPL_BUILD_DIR=$(pwd)/hpl_build
+mkdir -p $HPL_BUILD_DIR
+cd $HPL_BUILD_DIR</code></pre>
+                
+                <h3>Building the Dependencies (Open MPI & OpenBLAS)</h3>
+                <p>HPL has a few key dependencies: an MPI implementation and a BLAS (Basic Linear Algebra Subprograms) library. We'll compile both Open MPI and OpenBLAS from source inside our build directory.</p>
+                <img src="hpl_deps.png" alt="HPL Dependencies Diagram" style="width:100%; max-width:600px; display:block; margin: 0 auto; padding: 20px 0;">
+                <p>Let's start with Open MPI. We'll download the source, create a separate build directory (a good practice to keep the source tree clean), and configure it.</p>
+                <pre><code># Download and extract Open MPI
+wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.gz
+tar -xvf openmpi-5.0.8.tar.gz
+cd openmpi-5.0.8
+
+# Create build and install directories
+mkdir build
+cd build
+mkdir $HPL_BUILD_DIR/installs
+
+# Configure and build
+../configure --prefix=$HPL_BUILD_DIR/installs CC=gcc CXX=g++ FC=gfortran
+make -j 8
+make install</code></pre>
+                <p>The <code>--prefix</code> command tells the build system where to install the final files. Using our environment variable keeps things tidy. <code>make -j 8</code> tells it to use 8 processor cores to speed up the compilation.</p>
+
+                <p>While that's running, we can get started on OpenBLAS. It's important to navigate back to our main build directory first.</p>
+                <pre><code># IMPORTANT: Go back to the main build directory
+cd $HPL_BUILD_DIR
+
+# Clone and build OpenBLAS
+git clone https://github.com/OpenMathLib/OpenBLAS.git
+cd OpenBLAS
+make -j 8
+make PREFIX=$HPL_BUILD_DIR/installs install</code></pre>
+                <p>It's worth noting that while we're using Open MPI and OpenBLAS here, many other implementations are available (e.g., MPICH, Intel MPI, BLIS, ATLAS). In HPC competitions, trying different implementations and tuning their compilation can be a significant part of optimizing performance and is highly encouraged as an exercise!</p>
+
+                <h3>Compiling HPL</h3>
+                <p>Now that our dependencies are built and installed, we can compile HPL. First, we need to make sure we're using our newly compiled MPI and that our OpenBLAS libraries are where we expect them.</p>
+                <pre><code># Check that our custom-built mpicc is available
+$HPL_BUILD_DIR/installs/bin/mpicc --version
+
+# Check for our OpenBLAS libraries
+ls $HPL_BUILD_DIR/installs/lib</code></pre>
+                <p>With that confirmed, we configure HPL. This part is crucial. We tell the configure script where to find our custom MPI compiler and the OpenBLAS library.</p>
+                <pre><code># Go back to the main build directory and get HPL
+cd $HPL_BUILD_DIR
+wget http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz
+tar -xvf hpl-2.3.tar.gz
+cd hpl-2.3
+
+# Configure with our custom paths
+./configure CC=$HPL_BUILD_DIR/installs/bin/mpicc \
+            LDFLAGS="-L$HPL_BUILD_DIR/installs/lib" \
+            LIBS="-lopenblas"
+
+# Finally, build HPL
+make -j8 arch=Linux_GCC</code></pre>
+                <p>After a successful build, you're ready to run the benchmark! This usually involves creating a <code>HPL.dat</code> file and preparing a SLURM script to submit the job. While everything worked smoothly here for the demo, you often run into issues at every other step in the real world!</p>
+
+                <p>Truly understanding the input options in <code>HPL.dat</code> is complicated; luckily for us, there are many resources online to help create the input. <a href="https://www.advancedclustering.com/act_kb/tune-hpl-dat-file/">This website</a> is a good start! It won't get optimal performance as it only optimises some parameters, but it should get pretty close.</p>
+
+                <p>Once you have the input file ready, place it in the <code>$HPL_BUILD_DIR/hpl-2.3/testing/</code> directory, which is where the <code>xhpl</code> binary is located. For testing purposes, you can copy the example <code>HPL.dat</code> from <code>$HPL_BUILD_DIR/hpl-2.3/testing/ptest/HPL.dat</code>. You should now be able to submit a job to the scheduler. Here is an example SLURM script:</p>
+
+                <pre><code>#!/bin/bash
+#SBATCH --job-name=hpl_benchmark
+#SBATCH --output=hpl_benchmark_%j.out
+#SBATCH --error=hpl_benchmark_%j.err
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+#SBATCH --time=00:30:00
+
+module purge
+module load gcc/15.2
+
+cd $HPL_BUILD_DIR/hpl-2.3/testing/
+$HPL_BUILD_DIR/installs/bin/mpirun ./xhpl</code></pre>
+                
+                <h2 id="part-2">Part 2: A Little Library Mischief with LD_PRELOAD</h2>
+                <p>That compilation process is a great practical example of managing libraries. But what if we want to investigate or even manipulate which libraries a program uses? This brings us to a fascinating and powerful environment variable: <code>LD_PRELOAD</code>.</p>
+                
+                <h3>Checking Dynamic Libraries</h3>
+                <p>The easiest way to see what shared libraries an executable needs is <code>ldd</code>:</p>
+                <pre><code>ldd $HPL_BUILD_DIR/hpl-2.3/testing/xhpl</code></pre>
+                <p>For a hardcore check, you can actually look at the memory maps of a running process. Find the process ID (e.g., with <code>pidof xhpl</code>) and then check its maps:</p>
+                <pre><code>cat /proc/$(pidof xhpl)/maps</code></pre>
+                <p>This will show you the exact path of every shared object (<code>.so</code>) file loaded into that process's memory space. This is functionally equivalent to using the <code>pmap</code> command (e.g., <code>pmap $(pidof xhpl)</code>).</p>
+
+                <h3>What is LD_PRELOAD?</h3>
+                <p><code>LD_PRELOAD</code> is a powerful environment variable on Linux systems that allows you to specify a library to be loaded before any other library, including the standard C library (<code>libc</code>). This lets you override functions from other libraries with your own implementations. It's a powerful tool for debugging, but also for... other things.</p>
+
+                <h3>A Simple Example</h3>
+                <p>Let's take a look at a simple example of how <code>LD_PRELOAD</code> works. We have a simple C program that prints a random number:</p>
+                <h4>main.c</h4>
+                <pre><code>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;time.h&gt;
+
+int main() {
+    srand(time(NULL));
+    int r = rand();
+    printf("Random number: %d\n", r);
+    return 0;
+}</code></pre>
+
+                <p>Now, let's create our own shared library that also defines a <code>rand</code> function:</p>
+                <h4>library.c</h4>
+                <pre><code>int rand(void) {
+    return 13; // seems like a fairly random number to me
+}</code></pre>
+
+                <h3>Compilation</h3>
+                <p>First, we compile our main program:</p>
+                <pre><code>gcc -o main main.c</code></pre>
+                <p>Then, we compile our library into a shared object:</p>
+                <pre><code>gcc -shared -o library.so library.c</code></pre>
+
+                <h3>Execution</h3>
+                <p>Now, let's run our program. We'll also need to make it executable:</p>
+                <pre><code>chmod +x ./main</code></pre>
+                <p>If we run it normally, it will use the <code>rand</code> function from <code>libc</code>:</p>
+                <pre><code>$ ./main
+Random number: 1804289383</code></pre>
+                <p>But if we run it with <code>LD_PRELOAD</code> pointing to our library, our <code>rand</code> function will be used instead:</p>
+                <pre><code>$ LD_PRELOAD=./library.so ./main
+Random number: 13</code></pre>
+                <p>As you can see, we've successfully hijacked the <code>rand()</code> call!</p>
+
+                <h3>A Cool Use Case</h3>
+                <p>A ClusDur member made the <a href="https://github.com/dignissimus/sampi/tree/main">sampi</a> project, which enables latency-aware rank-reordering in MPI. This is a great example of how <code>LD_PRELOAD</code> can be used for more than just simple function overriding.</p>
+
+                <h3>A Thought Experiment with LD_PRELOAD</h3>
+                <blockquote>If you could <code>LD_PRELOAD</code> a single function for all the servers of any company to cause the most chaos, which company, what function, and why?</blockquote>
+                <p>My answer: target Cloudflare and preload their random number generator. If you could make their crypto-quality random numbers not-so-random (e.g., always return 4), you could silently break the cryptographic guarantees that underpin a huge chunk of the internet's security. It would be subtle yet catastrophic!</p>
+            </main>
+
+            <footer class="post-footer">
+                <a href="index.html">Back to Blog</a>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+    var SimplexNoise = (function () {
+        'use strict';
+        var F2 = 0.5 * (Math.sqrt(3.0) - 1.0), G2 = (3.0 - Math.sqrt(3.0)) / 6.0, F3 = 1.0 / 3.0, G3 = 1.0 / 6.0;
+        function SimplexNoise(random) {
+            if (typeof random !== 'function') random = Math.random;
+            this.p = new Uint8Array(256); this.perm = new Uint8Array(512); this.permMod12 = new Uint8Array(512);
+            for (var i = 0; i < 256; i++) { this.p[i] = random() * 256; }
+            var p = this.p;
+            for (i = 0; i < 512; i++) { this.perm[i] = p[i & 255]; this.permMod12[i] = this.perm[i] % 12; }
+        }
+        SimplexNoise.prototype = {
+            grad3: new Float32Array([1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1, 0, 1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, -1, 0, 1, 1, 0, -1, 1, 0, 1, -1, 0, -1, -1]),
+            noise3D: function(xin, yin, zin) {
+                var permMod12 = this.permMod12, perm = this.perm, grad3 = this.grad3;
+                var n0, n1, n2, n3;
+                var s = (xin + yin + zin) * F3;
+                var i = Math.floor(xin + s), j = Math.floor(yin + s), k = Math.floor(zin + s);
+                var t = (i + j + k) * G3;
+                var X0 = i - t, Y0 = j - t, Z0 = k - t;
+                var x0 = xin - X0, y0 = yin - Y0, z0 = zin - Z0;
+                var i1, j1, k1, i2, j2, k2;
+                if (x0 >= y0) {
+                    if (y0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+                    else if (x0 >= z0) { i1 = 1; j1 = 0; k1 = 0; i2 = 1; j2 = 0; k2 = 1; }
+                    else { i1 = 0; j1 = 0; k1 = 1; i2 = 1; j2 = 0; k2 = 1; }
+                } else {
+                    if (y0 < z0) { i1 = 0; j1 = 0; k1 = 1; i2 = 0; j2 = 1; k2 = 1; }
+                    else if (x0 < z0) { i1 = 0; j1 = 1; k1 = 0; i2 = 0; j2 = 1; k2 = 1; }
+                    else { i1 = 0; j1 = 1; k1 = 0; i2 = 1; j2 = 1; k2 = 0; }
+                }
+                var x1 = x0 - i1 + G3, y1 = y0 - j1 + G3, z1 = z0 - k1 + G3;
+                var x2 = x0 - i2 + 2.0 * G3, y2 = y0 - j2 + 2.0 * G3, z2 = z0 - k2 + 2.0 * G3;
+                var x3 = x0 - 1.0 + 3.0 * G3, y3 = y0 - 1.0 + 3.0 * G3, z3 = z0 - 1.0 + 3.0 * G3;
+                var ii = i & 255, jj = j & 255, kk = k & 255;
+                var t0 = 0.6 - x0 * x0 - y0 * y0 - z0 * z0;
+                if (t0 < 0) n0 = 0.0;
+                else {
+                    var gi0 = permMod12[ii + perm[jj + perm[kk]]];
+                    t0 *= t0;
+                    n0 = t0 * t0 * (grad3[gi0] * x0 + grad3[gi0 + 1] * y0 + grad3[gi0 + 2] * z0);
+                }
+                var t1 = 0.6 - x1 * x1 - y1 * y1 - z1 * z1;
+                if (t1 < 0) n1 = 0.0;
+                else {
+                    var gi1 = permMod12[ii + i1 + perm[jj + j1 + perm[kk + k1]]];
+                    t1 *= t1;
+                    n1 = t1 * t1 * (grad3[gi1] * x1 + grad3[gi1 + 1] * y1 + grad3[gi1 + 2] * z1);
+                }
+                var t2 = 0.6 - x2 * x2 - y2 * y2 - z2 * z2;
+                if (t2 < 0) n2 = 0.0;
+                else {
+                    var gi2 = permMod12[ii + i2 + perm[jj + j2 + perm[kk + k2]]];
+                    t2 *= t2;
+                    n2 = t2 * t2 * (grad3[gi2] * x2 + grad3[gi2 + 1] * y2 + grad3[gi2 + 2] * z2);
+                }
+                var t3 = 0.6 - x3 * x3 - y3 * y3 - z3 * z3;
+                if (t3 < 0) n3 = 0.0;
+                else {
+                    var gi3 = permMod12[ii + 1 + perm[jj + 1 + perm[kk + 1]]];
+                    t3 *= t3;
+                    n3 = t3 * t3 * (grad3[gi3] * x3 + grad3[gi3 + 1] * y3 + grad3[gi3 + 2] * z3);
+                }
+                return 32.0 * (n0 + n1 + n2 + n3);
+            }
+        };
+        return SimplexNoise;
+    }());
+
+    const canvas = document.getElementById('topo-canvas');
+    const ctx = canvas.getContext('2d');
+    const simplex = new SimplexNoise();
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    let t = 0;
+    const resolution = 20;
+    let cols, rows;
+    let field = [];
+    const noiseScale = 0.02;
+    const timeSpeed = 0.001; 
+
+    function setup() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / resolution) + 1;
+        rows = Math.floor(canvas.height / resolution) + 1;
+        field = new Array(cols);
+        for (let x = 0; x < cols; x++) { field[x] = new Array(rows); }
+    }
+
+    function updateField() {
+        for (let x = 0; x < cols; x++) {
+            for (let y = 0; y < rows; y++) {
+                let noiseVal = simplex.noise3D(x * noiseScale, y * noiseScale, t);
+                const dx = (x * resolution) - mouse.x, dy = (y * resolution) - mouse.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const mouseRadius = 150;
+                if (dist < mouseRadius) {
+                    const influence = (1 - dist / mouseRadius) * 0.5;
+                    noiseVal += influence;
+                }
+                field[x][y] = noiseVal;
+            }
+        }
+    }
+    
+    function getState(a, b, c, d, threshold) {
+        let state = 0;
+        if (a > threshold) state |= 8; if (b > threshold) state |= 4; if (c > threshold) state |= 2; if (d > threshold) state |= 1;
+        return state;
+    }
+
+    function drawIsolines() {
+        const numLevels = 8;
+        for (let i = 0; i < numLevels; i++) {
+            const threshold = -1 + (i / numLevels) * 2;
+            const line_alpha = 0.1 + (i / numLevels) * 0.4;
+            ctx.strokeStyle = `rgba(204, 204, 204, ${line_alpha})`;
+            ctx.lineWidth = 1;
+            for (let x = 0; x < cols - 1; x++) {
+                for (let y = 0; y < rows - 1; y++) {
+                    const x_pos = x * resolution, y_pos = y * resolution;
+                    const a = {x: x_pos + resolution / 2, y: y_pos};
+                    const b = {x: x_pos + resolution, y: y_pos + resolution / 2};
+                    const c = {x: x_pos + resolution / 2, y: y_pos + resolution};
+                    const d = {x: x_pos, y: y_pos + resolution / 2};
+                    const state = getState(field[x][y], field[x+1][y], field[x+1][y+1], field[x][y+1], threshold);
+                    ctx.beginPath();
+                    switch (state) {
+                        case 1: line(c, d); break; case 2: line(b, c); break; case 3: line(b, d); break;
+                        case 4: line(a, b); break; case 5: line(a, d); line(b, c); break; case 6: line(a, c); break;
+                        case 7: line(a, d); break; case 8: line(a, d); break; case 9: line(a, c); break;
+                        case 10: line(a, b); line(c, d); break; case 11: line(a, b); break; case 12: line(b, d); break;
+                        case 13: line(b, c); break; case 14: line(c, d); break;
+                    }
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    function line(p1, p2) { ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); }
+    
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        updateField();
+        drawIsolines();
+        t += timeSpeed;
+        requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', setup);
+    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    setup();
+    draw();
+    </script>
+</body>
+</html>

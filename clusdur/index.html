@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClusDur Hub | A Deep Dive into Libraries</title>
+    <title>ClusDur Hub</title>
     <style>
         :root {
             --bg-color: #050505;
@@ -35,104 +35,47 @@
             flex-direction: column;
             align-items: center;
             padding: 2rem;
+            min-height: 100vh;
+            justify-content: center;
         }
-        .post-container {
+        .landing-container {
             max-width: 800px;
             width: 100%;
-        }
-        .post-header {
             text-align: center;
-            margin-bottom: 3rem;
-            border-bottom: 1px solid #333;
-            padding-bottom: 2rem;
         }
-        .post-header h1 {
-            font-size: clamp(2rem, 5vw, 3.5rem);
+        .landing-header h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
             color: var(--heading-color);
-            margin: 0 0 0.5rem 0;
+            margin: 0 0 1rem 0;
         }
-        .post-header p {
-            font-size: 1rem;
+        .landing-header p {
+            font-size: 1.2rem;
             color: #aaa;
+            margin-bottom: 4rem;
         }
-        .post-content h2 {
-            font-size: 2rem;
-            color: var(--accent-color);
-            margin-top: 3rem;
-            border-bottom: 1px solid #444;
-            padding-bottom: 0.5rem;
-        }
-        .post-content h3 {
-            font-size: 1.5rem;
-            color: var(--heading-color);
-            margin-top: 2rem;
-        }
-        .post-content p, .post-content ul, .post-content li {
-            font-size: 1.1rem;
-        }
-        .post-content ul {
-            padding-left: 1.5rem;
-        }
-        .post-content a {
-            color: var(--accent-color);
-            text-decoration: none;
-        }
-        .post-content a:hover {
-            text-decoration: underline;
-        }
-        pre {
-            background-color: var(--code-bg);
-            border: 1px solid #333;
-            border-radius: 5px;
-            padding: 1rem;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-size: 1rem;
-            color: #f0f0f0;
-        }
-        code {
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', 'Roboto Mono', monospace;
-            background-color: var(--code-bg);
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-        }
-        pre code {
-            padding: 0;
-            background-color: transparent;
-        }
-        .post-content img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 1.5rem auto;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-        blockquote {
-            border-left: 4px solid var(--accent-color);
-            padding-left: 1rem;
-            margin-left: 0;
-            font-style: italic;
-            color: #ccc;
-        }
-        .toc {
-            background-color: #111;
-            border: 1px solid #333;
-            border-radius: 5px;
-            padding: 1.5rem;
-            margin: 2rem 0;
-        }
-        .toc h2 {
-            margin-top: 0;
-            border-bottom: none;
-            font-size: 1.5rem;
-        }
-        .toc ul {
+        .article-list {
             list-style: none;
             padding: 0;
+            margin: 0;
         }
-        .toc li {
-            margin-bottom: 0.5rem;
+        .article-item {
+            margin-bottom: 1.5rem;
+        }
+        .article-item a {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .article-item a:hover {
+            color: var(--heading-color);
+            text-decoration: underline;
+        }
+        .article-date {
+            font-size: 1rem;
+            color: #888;
+            display: block;
+            margin-top: 0.25rem;
         }
         .post-footer {
             margin-top: 4rem;
@@ -159,127 +102,21 @@
     <canvas id="topo-canvas"></canvas>
 
     <div class="content-wrapper">
-        <div class="post-container">
-            <header class="post-header">
-                <h1>A Deep Dive into Libraries: HPL, ldd, and LD_PRELOAD</h1>
-                <p>Posted on January 29, 2026</p>
+        <div class="landing-container">
+            <header class="landing-header">
+                <h1>ClusDur Hub</h1>
+                <p>A collection of deep dives into HPC, system tools, and performance.</p>
             </header>
 
-            <main class="post-content">
-                <p>Compiling high-performance software from source is a foundational skill in HPC. It allows for machine-specific optimisations that can't be achieved with pre-built binaries. This post uses the High-Performance Linpack (HPL) benchmark as a practical example to explore the compilation process, and then dives into some interesting concepts like <code>ldd</code> and <code>LD_PRELOAD</code>.</p>
-                
-                <nav class="toc">
-                    <h2>Contents</h2>
-                    <ul>
-                        <li><a href="#part-1">Part 1: Compiling HPL from Source</a></li>
-                        <li><a href="#part-2">Part 2: A Little Library Mischief</a></li>
-                    </ul>
-                </nav>
-
-                <h2 id="part-1">Part 1: Compiling HPL from Source</h2>
-                <p>When you need a piece of software, you have two main options: use a pre-built binary or compile it from source. While pre-built is easier, compiling from source is usually better in HPC because the compiler can make machine-specific optimisations for the exact hardware you're running on. For HPL, this is key to squeezing out every last drop of performance.</p>
-
-                <h3>Setting up the Environment</h3>
-                <p>First, after logging into the cluster, it's good practice to start with a clean slate by purging any loaded modules, and then loading the specific compiler we need. In this case, a modern GCC.</p>
-                <pre><code>module purge
-module avail gcc
-module load gcc/15.2
-
-# Set up a build directory
-export HPL_BUILD_DIR=$(pwd)/hpl_build
-mkdir -p $HPL_BUILD_DIR
-cd $HPL_BUILD_DIR</code></pre>
-                
-                <h3>Building the Dependencies (Open MPI & OpenBLAS)</h3>
-                <p>HPL has a few key dependencies: an MPI implementation and a BLAS (Basic Linear Algebra Subprograms) library. We'll compile both Open MPI and OpenBLAS from source inside our build directory.</p>
-                <img src="hpl_deps.png" alt="HPL Dependencies Diagram" style="width:100%; max-width:600px; display:block; margin: 0 auto; padding: 20px 0;">
-                <p>Let's start with Open MPI. We'll download the source, create a separate build directory (a good practice to keep the source tree clean), and configure it.</p>
-                <pre><code># Download and extract Open MPI
-wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.gz
-tar -xvf openmpi-5.0.8.tar.gz
-cd openmpi-5.0.8
-
-# Create build and install directories
-mkdir build
-cd build
-mkdir $HPL_BUILD_DIR/installs
-
-# Configure and build
-../configure --prefix=$HPL_BUILD_DIR/installs CC=gcc CXX=g++ FC=gfortran
-make -j 8
-make install</code></pre>
-                <p>The <code>--prefix</code> command tells the build system where to install the final files. Using our environment variable keeps things tidy. <code>make -j 8</code> tells it to use 8 processor cores to speed up the compilation.</p>
-
-                <p>While that's running, we can get started on OpenBLAS. It's important to navigate back to our main build directory first.</p>
-                <pre><code># IMPORTANT: Go back to the main build directory
-cd $HPL_BUILD_DIR
-
-# Clone and build OpenBLAS
-git clone https://github.com/OpenMathLib/OpenBLAS.git
-cd OpenBLAS
-make -j 8
-make PREFIX=$HPL_BUILD_DIR/installs install</code></pre>
-                <p>It's worth noting that while we're using Open MPI and OpenBLAS here, many other implementations are available (e.g., MPICH, Intel MPI, BLIS, ATLAS). In HPC competitions, trying different implementations and tuning their compilation can be a significant part of optimizing performance and is highly encouraged as an exercise!</p>
-
-                <h3>Compiling HPL</h3>
-                <p>Now that our dependencies are built and installed, we can compile HPL. First, we need to make sure we're using our newly compiled MPI and that our OpenBLAS libraries are where we expect them.</p>
-                <pre><code># Check that our custom-built mpicc is available
-$HPL_BUILD_DIR/installs/bin/mpicc --version
-
-# Check for our OpenBLAS libraries
-ls $HPL_BUILD_DIR/installs/lib</code></pre>
-                <p>With that confirmed, we configure HPL. This part is crucial. We tell the configure script where to find our custom MPI compiler and the OpenBLAS library.</p>
-                <pre><code># Go back to the main build directory and get HPL
-cd $HPL_BUILD_DIR
-wget http://www.netlib.org/benchmark/hpl/hpl-2.3.tar.gz
-tar -xvf hpl-2.3.tar.gz
-cd hpl-2.3
-
-# Configure with our custom paths
-./configure CC=$HPL_BUILD_DIR/installs/bin/mpicc \
-            LDFLAGS="-L$HPL_BUILD_DIR/installs/lib" \
-            LIBS="-lopenblas"
-
-# Finally, build HPL
-make -j8 arch=Linux_GCC</code></pre>
-                <p>After a successful build, you're ready to run the benchmark! This usually involves creating a <code>HPL.dat</code> file and preparing a SLURM script to submit the job. While everything worked smoothly here for the demo, you often run into issues at every other step in the real world!</p>
-
-                <p>Truly understanding the input options in <code>HPL.dat</code> is complicated; luckily for us, there are many resources online to help create the input. <a href="https://www.advancedclustering.com/act_kb/tune-hpl-dat-file/">This website</a> is a good start! It won't get optimal performance as it only optimises some parameters, but it should get pretty close.</p>
-
-                <p>Once you have the input file ready, place it in the <code>$HPL_BUILD_DIR/hpl-2.3/testing/</code> directory, which is where the <code>xhpl</code> binary is located. For testing purposes, you can copy the example <code>HPL.dat</code> from <code>$HPL_BUILD_DIR/hpl-2.3/testing/ptest/HPL.dat</code>. You should now be able to submit a job to the scheduler. Here is an example SLURM script:</p>
-
-                <pre><code>#!/bin/bash
-#SBATCH --job-name=hpl_benchmark
-#SBATCH --output=hpl_benchmark_%j.out
-#SBATCH --error=hpl_benchmark_%j.err
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=4
-#SBATCH --time=00:30:00
-
-module purge
-module load gcc/15.2
-
-cd $HPL_BUILD_DIR/hpl-2.3/testing/
-$HPL_BUILD_DIR/installs/bin/mpirun ./xhpl</code></pre>
-                
-                <h2 id="part-2">Part 2: A Little Library Mischief</h2>
-                <p>That compilation process is a great practical example of managing libraries. But what if we want to investigate or even manipulate which libraries a program uses?</p>
-
-                <h3>Checking Dynamic Libraries</h3>
-                <p>The easiest way to see what shared libraries an executable needs is <code>ldd</code>:</p>
-                <pre><code>ldd $HPL_BUILD_DIR/hpl-2.3/testing/xhpl</code></pre>
-                <p>For a hardcore check, you can actually look at the memory maps of a running process. Find the process ID (e.g., with <code>pidof xhpl</code>) and then check its maps:</p>
-                <pre><code>cat /proc/$(pidof xhpl)/maps | grep .so</code></pre>
-                <p>This will show you the exact path of every shared object (<code>.so</code>) file loaded into that process's memory space.</p>
-                
-                <h3>A Thought Experiment with LD_PRELOAD</h3>
-                <p>This brings us to a fascinating and powerful environment variable: <code>LD_PRELOAD</code>. It allows you to tell the dynamic linker to load your own library <em>before</em> any other library, including standard ones like `libc`. This means if your library contains a function with the same name as a standard function (e.g., <code>rand()</code>), your version will be used instead. It's a powerful tool for debugging, but also for... other things.</p>
-                
-                <blockquote>If you could <code>LD_PRELOAD</code> a single function for all the servers of any company to cause the most chaos, which company, what function, and why?</blockquote>
-                
-                <p>My answer: target Cloudflare and preload their random number generator. If you could make their crypto-quality random numbers not-so-random (e.g., always return 4), you could silently break the cryptographic guarantees that underpin a huge chunk of the internet's security. It would be subtle yet catastrophic!</p>
+            <main>
+                <ul class="article-list">
+                    <li class="article-item">
+                        <a href="hpl-deep-dive.html">A Deep Dive into Libraries: HPL, ldd, and LD_PRELOAD</a>
+                        <span class="article-date">January 29, 2026</span>
+                    </li>
+                </ul>
             </main>
-
+            
             <footer class="post-footer">
                 <a href="../index.html">Back to Main Site</a>
             </footer>
